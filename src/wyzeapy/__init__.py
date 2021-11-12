@@ -17,7 +17,7 @@ from wyzeapy.services.camera_service import CameraService
 from wyzeapy.services.hms_service import HMSService
 from wyzeapy.services.lock_service import LockService
 from wyzeapy.services.sensor_service import SensorService
-from wyzeapy.services.switch_service import SwitchService
+from wyzeapy.services.switch_service import SwitchService, SwitchUsageService
 from wyzeapy.services.thermostat_service import ThermostatService
 from wyzeapy.utils import check_for_errors_standard
 from wyzeapy.wyze_auth_lib import WyzeAuthLib, Token
@@ -34,6 +34,7 @@ class Wyzeapy:
     def __init__(self):
         self._bulb_service = None
         self._switch_service = None
+        self._switch_usage_service = None
         self._camera_service = None
         self._thermostat_service = None
         self._hms_service = None
@@ -190,6 +191,14 @@ class Wyzeapy:
         if self._switch_service is None:
             self._switch_service = SwitchService(self._auth_lib)
         return self._switch_service
+
+    @property
+    async def switch_usage_service(self) -> SwitchUsageService:
+        """Returns an instance of the switch usage service"""
+
+        if self._switch_usage_service is None:
+            self._switch_usage_service = SwitchUsageService(self._auth_lib)
+        return self._switch_usage_service
 
     @property
     async def camera_service(self) -> CameraService:

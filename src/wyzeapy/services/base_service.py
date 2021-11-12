@@ -5,6 +5,7 @@
 #  joshua@mulliken.net to receive a copy
 import json
 import time
+from datetime import datetime
 from typing import List, Tuple, Any, Dict, Optional
 import asyncio
 
@@ -574,3 +575,41 @@ class BaseService:
         response_json = await self._auth_lib.post(url, headers=headers, data=payload_str)
 
         check_for_errors_thermostat(response_json)
+
+    async def _get_plug_history(self, device: Device, start_time, end_time) -> Dict[Any, Any]:
+        """
+        Wraps the https://api.wyzecam.com/app/v2/plug/usage_record_list endpoint
+
+        :param device: The device to gather history for
+        :param start_time: The start time to gather history for in seconds since epoch
+        :param end_time: The end time to gather history for in seconds since epoch
+        :return: dictionary where the key is the timestamp for the day and the value is a list of power usage where the index is the hour (0-23)
+        """
+
+        await self._auth_lib.refresh_if_should()
+
+        payload = {
+            "phone_id": PHONE_ID,
+            "date_begin": start_time,
+            "date_end": end_time,
+            "app_name": APP_NAME,
+            "app_version": APP_VERSION,
+            "sc": SC,
+            "device_mac": device.mac,
+            "sv": SV,
+            "phone_system_type": PHONE_SYSTEM_TYPE,
+            "app_ver": APP_VER,
+            "ts": int(datetime.utcnow().timestamp()),
+            "access_token": self._auth_lib.token.access_token
+        }
+
+        response_json = await self._auth_lib.post("https://api.wyzecam.com/app/v2/plug/usage_record_list",
+                                                  json=payload)
+
+        check_for_errors_standard(response_json)
+
+        return_dict = {}
+        for entry in response_json['data']['usage_record_list']:
+            # return a dict where the key is a timestamp for the start of the day and the value is a list of the usage values per hour
+            return_dict[entry["date_ts"]] = list(map(int, entry["data"].strip('[]').split(',')))
+        return return_dict
