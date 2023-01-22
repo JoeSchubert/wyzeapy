@@ -54,6 +54,7 @@ class Token:
 class WyzeAuthLib:
     token: Optional[Token] = None
     _conn = TCPConnector(ttl_dns_cache=(300)) # cache DNS replies for 5 minutes
+    _session = ClientSession(connector=_conn)
     SANITIZE_FIELDS = [
         "email",
         "password",
@@ -195,15 +196,13 @@ class WyzeAuthLib:
             "X-API-Key": API_KEY
         }
 
-        async with ClientSession(self._conn) as _session:
-            response = await _session.post("https://api.wyzecam.com/app/user/refresh_token", headers=headers,
-                                           json=payload)
-        response_json = await response.json()
-        check_for_errors_standard(response_json)
+        async with self._session.post("https://api.wyzecam.com/app/user/refresh_token", headers=headers, json=payload) as response:
+            response_json = await response.json()
+            check_for_errors_standard(response_json)
 
-        self.token.access_token = response_json['data']['access_token']
-        self.token.refresh_token = response_json['data']['refresh_token']
-        await self.token_callback(self.token)
+            self.token.access_token = response_json['data']['access_token']
+            self.token.refresh_token = response_json['data']['refresh_token']
+            await self.token_callback(self.token)
 
     def sanitize(self, data):
         if data and type(data) is dict:
@@ -216,8 +215,7 @@ class WyzeAuthLib:
         return data
 
     async def post(self, url, json=None, headers=None, data=None) -> Dict[Any, Any]:
-        async with ClientSession(self._conn) as _session:
-            response = await _session.post(url, json=json, headers=headers, data=data)
+        async with self._session.post(url, json=json, headers=headers, data=data) as response:
             # Relocated these below as the sanitization seems to modify the data before it goes to the post.
             _LOGGER.debug("Request:")
             _LOGGER.debug(f"url: {url}")
@@ -233,8 +231,7 @@ class WyzeAuthLib:
             return await response.json()
 
     async def get(self, url, headers=None, params=None) -> Dict[Any, Any]:
-        async with ClientSession(self._conn) as _session:
-            response = await _session.get(url, params=params, headers=headers)
+        async with self._session.get(url, headers=headers, params=params) as response:
             # Relocated these below as the sanitization seems to modify the data before it goes to the post.
             _LOGGER.debug("Request:")
             _LOGGER.debug(f"url: {url}")
@@ -249,8 +246,7 @@ class WyzeAuthLib:
             return await response.json()
 
     async def patch(self, url, headers=None, params=None, json=None) -> Dict[Any, Any]:
-        async with ClientSession(self._conn) as _session:
-            response = await _session.patch(url, headers=headers, params=params, json=json)
+        async with self._session.patch(url, headers=headers, params=params, json=json) as response:
             # Relocated these below as the sanitization seems to modify the data before it goes to the post.
             _LOGGER.debug("Request:")
             _LOGGER.debug(f"url: {url}")
@@ -266,8 +262,7 @@ class WyzeAuthLib:
             return await response.json()
 
     async def delete(self, url, headers=None, json=None) -> Dict[Any, Any]:
-        async with ClientSession(self._conn) as _session:
-            response = await _session.delete(url, headers=headers, json=json)
+        async with self._session.delete(url, headers=headers, json=json) as response:
             # Relocated these below as the sanitization seems to modify the data before it goes to the post.
             _LOGGER.debug("Request:")
             _LOGGER.debug(f"url: {url}")
